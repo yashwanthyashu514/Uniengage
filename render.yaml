@@ -3,16 +3,20 @@ services:
   - type: web
     name: uniengage-backend
     env: node
-    region: singapore  # Change to your preferred region (oregon, frankfurt, singapore, etc.)
-    plan: free  # Free tier - upgrade to starter for better performance
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
+    region: singapore  # Closest to India
+    plan: free
+    rootDir: backend  # THIS IS THE FIX - Use backend folder as root
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
       - key: MONGO_URI
-        sync: false  # You'll set this manually in Render dashboard
+        sync: false  # Set manually in Render dashboard
       - key: JWT_SECRET
-        generateValue: true  # Render will generate a secure random value
+        value: uniengage_secret_key
       - key: NODE_ENV
         value: production
     healthCheckPath: /
     autoDeploy: true  # Auto-deploy on git push
+    # Specify Node.js version
+    runtime: node
+    nodeVersion: 18
