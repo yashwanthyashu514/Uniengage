@@ -8,10 +8,11 @@ const getStudentDashboard = async (req, res) => {
     try {
         const user = await User.findById(studentId).select('-passwordHash');
         const attendedEvents = await Attendance.find({ studentId }).populate('eventId');
-        const creditHistory = await CreditTransaction.find({ studentId }).populate('eventId');
+        const creditHistory = await CreditTransaction.find({ studentId }).populate('eventId').sort({ createdAt: -1 });
 
         res.json({
             user,
+            totalCredits: user.totalCredits || 0,
             attendedEvents,
             creditHistory,
         });

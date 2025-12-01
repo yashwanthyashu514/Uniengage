@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 
@@ -20,15 +21,19 @@ export const AuthProvider = ({ children }) => {
             const { data } = await axios.post('http://localhost:5000/api/auth/login', { email, password });
             setUser(data);
             localStorage.setItem('user', JSON.stringify(data));
+            toast.success(`Welcome back, ${data.name}! 🎉`);
             return { success: true, user: data };
         } catch (error) {
-            return { success: false, message: error.response?.data?.message || 'Login failed' };
+            const message = error.response?.data?.message || 'Login failed';
+            toast.error(message);
+            return { success: false, message };
         }
     };
 
     const logout = () => {
         setUser(null);
         localStorage.removeItem('user');
+        toast.success('Logged out successfully');
     };
 
     return (
