@@ -1,0 +1,18 @@
+services:
+  # UniEngage Backend Web Service
+  - type: web
+    name: uniengage-backend
+    env: node
+    region: singapore  # Change to your preferred region (oregon, frankfurt, singapore, etc.)
+    plan: free  # Free tier - upgrade to starter for better performance
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: MONGO_URI
+        sync: false  # You'll set this manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true  # Render will generate a secure random value
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /
+    autoDeploy: true  # Auto-deploy on git push
