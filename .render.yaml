@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: uniengage-backend
+    rootDir: backend
+    env: node
+    region: oregon
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    nodeVersion: 18
