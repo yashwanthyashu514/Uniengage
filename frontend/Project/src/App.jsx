@@ -15,6 +15,8 @@ import Reports from './pages/Reports';
 import Certificates from './pages/Certificates';
 import ManageCoordinators from './pages/ManageCoordinators';
 import Attendance from './pages/Attendance';
+import StudentRegistration from './pages/StudentRegistration';
+import VerifyOtp from './pages/VerifyOtp';
 import PrivateRoute from './components/PrivateRoute';
 import LandingPage from './pages/LandingPage';
 
@@ -50,6 +52,8 @@ function App() {
         />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/student-registration" element={<StudentRegistration />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/welcome" element={<PrivateRoute><LandingPage /></PrivateRoute>} />
           <Route path="/student/dashboard" element={<PrivateRoute role="STUDENT"><Dashboard /></PrivateRoute>} />
           <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />

@@ -92,8 +92,8 @@ const Events = () => {
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setFilter(status)}
                             className={`px-6 py-2 rounded-full font-medium transition-all ${filter === status
-                                    ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg'
-                                    : 'glass-button text-white/80'
+                                ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg'
+                                : 'glass-button text-white/80'
                                 }`}
                         >
                             {status}

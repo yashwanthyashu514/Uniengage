@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
@@ -40,18 +40,7 @@ const Login = () => {
         }
     };
 
-    const quickLogin = (role) => {
-        if (role === 'admin') {
-            setEmail('admin@gmu.edu');
-            setPassword('Admin@123');
-        } else if (role === 'coordinator') {
-            setEmail('coordinator@gmu.edu');
-            setPassword('Coord@123');
-        } else {
-            setEmail('student@gmu.edu');
-            setPassword('Stud@123');
-        }
-    };
+
 
     return (
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-black">
@@ -166,20 +155,14 @@ const Login = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.7 }}
-                        className="mt-8 pt-6 border-t border-white/10"
+                        className="mt-6 text-center"
                     >
-                        <p className="text-white/40 text-xs mb-3 text-center uppercase tracking-widest">Demo Access</p>
-                        <div className="flex justify-center gap-3">
-                            {['admin', 'coordinator', 'student'].map((role) => (
-                                <button
-                                    key={role}
-                                    onClick={() => quickLogin(role)}
-                                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs transition-all border border-white/5 hover:border-white/20 capitalize"
-                                >
-                                    {role}
-                                </button>
-                            ))}
-                        </div>
+                        <p className="text-white/60 text-sm">
+                            Don't have an account?{' '}
+                            <Link to="/student-registration" className="text-yellow-400 hover:text-yellow-300 font-medium transition-colors">
+                                Register
+                            </Link>
+                        </p>
                     </motion.div>
                 </div>
 

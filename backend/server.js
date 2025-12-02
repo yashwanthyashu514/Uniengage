@@ -19,6 +19,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/uploads', express.static('uploads'));
 
 const seedUsers = async () => {
     const users = [

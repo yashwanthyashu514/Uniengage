@@ -4,7 +4,7 @@ import AuthContext from '../context/AuthContext';
 import Layout from '../components/Layout';
 import CountdownTimer from '../components/CountdownTimer';
 import { motion } from 'framer-motion';
-import { Trophy, Calendar, TrendingUp, Clock, Award } from 'lucide-react';
+import { Trophy, Calendar, TrendingUp, Clock, Award, FileText } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import toast from 'react-hot-toast';
 
@@ -31,7 +31,7 @@ const Dashboard = () => {
             const token = user.token;
             const config = { headers: { Authorization: `Bearer ${token}` } };
             const { data } = await axios.get('http://localhost:5000/api/events/list', config);
-            setAvailableEvents(data.filter(e => e.status === 'APPROVED').slice(0, 4));
+            setAvailableEvents(data.filter(e => e.status === 'APPROVED'));
         } catch (error) {
             console.error(error);
         } finally {
@@ -46,12 +46,26 @@ const Dashboard = () => {
         }
     }, [user]);
 
-    const handleRegister = async (eventId) => {
+    const [registrationEvent, setRegistrationEvent] = useState(null);
+    const [isRuleAccepted, setIsRuleAccepted] = useState(false);
+
+    const openRegistrationModal = (event) => {
+        setRegistrationEvent(event);
+        setIsRuleAccepted(false);
+    };
+
+    const handleConfirmRegistration = async () => {
+        if (!isRuleAccepted) return;
+
         try {
             const token = user.token;
             const config = { headers: { Authorization: `Bearer ${token}` } };
-            await axios.post('http://localhost:5000/api/events/register', { eventId }, config);
-            toast.success('Successfully registered for event! 🎉');
+            await axios.post('http://localhost:5000/api/events/register', {
+                eventId: registrationEvent._id,
+                acceptedRules: true
+            }, config);
+            toast.success('Registered Successfully! 🎉');
+            setRegistrationEvent(null);
             fetchDashboardData();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Registration failed');
@@ -190,14 +204,14 @@ const Dashboard = () => {
                     </div>
                 </motion.div>
 
-                {/* Upcoming Events */}
+                {/* Available Events */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
+                    transition={{ delay: 0.45 }}
                     className="glass-card p-6"
                 >
-                    <h2 className="text-xl font-bold text-white mb-6">Upcoming Events</h2>
+                    <h2 className="text-xl font-bold text-white mb-6">Available Events</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {availableEvents.map((event, index) => (
                             <motion.div
@@ -205,32 +219,91 @@ const Dashboard = () => {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.1 * index }}
-                                whileHover={{ scale: 1.02 }}
-                                className="glass-card p-4"
+                                className="glass-card p-4 flex flex-col justify-between"
                             >
-                                <h3 className="font-bold text-white text-lg mb-2">{event.title}</h3>
-                                <p className="text-white/70 text-sm mb-3 line-clamp-2">{event.description}</p>
-                                <div className="flex items-center gap-4 text-sm text-white/60 mb-3">
-                                    <div className="flex items-center gap-1">
-                                        <Calendar className="w-4 h-4" />
-                                        {new Date(event.date).toLocaleDateString()}
+                                <div>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-bold text-white text-lg">{event.title}</h3>
+                                        <span className="bg-white/10 px-2 py-1 rounded text-xs text-white/80">{event.category}</span>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Trophy className="w-4 h-4" />
-                                        {event.credits} Credits
+                                    <p className="text-white/70 text-sm mb-3 line-clamp-2">{event.description}</p>
+
+                                    <div className="flex items-center gap-4 text-sm text-white/60 mb-4">
+                                        <div className="flex items-center gap-1">
+                                            <Calendar className="w-4 h-4" />
+                                            {new Date(event.date).toLocaleDateString()}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Trophy className="w-4 h-4" />
+                                            {event.credits} Credits
+                                        </div>
                                     </div>
                                 </div>
-                                <CountdownTimer eventDate={event.date} />
+
                                 <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleRegister(event._id)}
-                                    className="w-full py-2 bg-gradient-to-r from-gmu-maroon to-gmu-maroon-dark text-white rounded-lg font-semibold text-sm mt-3"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => openRegistrationModal(event)}
+                                    className="w-full py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg font-semibold"
                                 >
-                                    Register Now
+                                    Register
                                 </motion.button>
                             </motion.div>
                         ))}
+                        {availableEvents.length === 0 && (
+                            <p className="text-white/50 col-span-2 text-center py-4">No available events at the moment.</p>
+                        )}
+                    </div>
+                </motion.div>
+
+                {/* Registered Events */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="glass-card p-6"
+                >
+                    <h2 className="text-xl font-bold text-white mb-6">Registered Events</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {dashboardData.registeredEvents?.map((reg, index) => {
+                            const event = reg.eventId;
+                            if (!event) return null;
+
+                            // Format registration timestamp
+                            const regDate = new Date(reg.createdAt);
+                            const formattedDate = regDate.toLocaleDateString('en-GB'); // DD-MM-YYYY
+                            const formattedTime = regDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                            const timestampStr = `Registered on: ${formattedDate.replace(/\//g, '-')} | ${formattedTime}`;
+
+                            return (
+                                <motion.div
+                                    key={reg._id}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.1 * index }}
+                                    whileHover={{ scale: 1.02 }}
+                                    className="glass-card p-4"
+                                >
+                                    <h3 className="font-bold text-white text-lg mb-1">{event.title}</h3>
+                                    <p className="text-white/60 text-xs mb-2 font-mono">{timestampStr}</p>
+                                    <p className="text-white/70 text-sm mb-3 line-clamp-2">{event.description}</p>
+                                    <div className="flex items-center gap-4 text-sm text-white/60 mb-3">
+                                        <div className="flex items-center gap-1">
+                                            <Calendar className="w-4 h-4" />
+                                            {new Date(event.date).toLocaleDateString()}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Trophy className="w-4 h-4" />
+                                            {event.credits} Credits
+                                        </div>
+                                    </div>
+                                    <CountdownTimer eventDate={event.date} />
+                                </motion.div>
+                            );
+                        })}
+                        {(!dashboardData.registeredEvents || dashboardData.registeredEvents.length === 0) && (
+                            <p className="text-white/50 col-span-2 text-center py-4">No registered events yet.</p>
+                        )}
                     </div>
                 </motion.div>
 
@@ -265,6 +338,68 @@ const Dashboard = () => {
                     </motion.div>
                 )}
             </div>
+
+            {/* Registration Modal */}
+            {registrationEvent && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setRegistrationEvent(null)}>
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="glass-card p-8 max-w-md w-full"
+                    >
+                        <h2 className="text-2xl font-bold text-white mb-4">Register for {registrationEvent.title}</h2>
+                        <p className="text-white/70 mb-6">Please review the event rules and terms before confirming your registration.</p>
+
+                        {registrationEvent.rulebookUrl && (
+                            <a
+                                href={`http://localhost:5000/${registrationEvent.rulebookUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-blue-300 hover:text-blue-200 mb-6 p-3 bg-white/5 rounded-lg transition-colors"
+                            >
+                                <FileText className="w-5 h-5" />
+                                <span className="font-medium">View Rulebook (PDF)</span>
+                            </a>
+                        )}
+
+                        <label className="flex items-start gap-3 cursor-pointer group mb-8">
+                            <div className="relative flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={isRuleAccepted}
+                                    onChange={(e) => setIsRuleAccepted(e.target.checked)}
+                                    className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-white/30 bg-white/10 transition-all checked:border-indigo-500 checked:bg-indigo-500"
+                                />
+                                <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <span className="text-sm text-white/80 group-hover:text-white transition-colors select-none">
+                                I have read and accept the event rules & terms and conditions.
+                            </span>
+                        </label>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setRegistrationEvent(null)}
+                                className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmRegistration}
+                                disabled={!isRuleAccepted}
+                                className="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
+                            >
+                                Confirm Registration
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </Layout>
     );
 };

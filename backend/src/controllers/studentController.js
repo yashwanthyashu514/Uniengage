@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Attendance = require('../models/Attendance');
 const CreditTransaction = require('../models/CreditTransaction');
+const Registration = require('../models/Registration');
 
 const getStudentDashboard = async (req, res) => {
     const studentId = req.user._id;
@@ -10,11 +11,17 @@ const getStudentDashboard = async (req, res) => {
         const attendedEvents = await Attendance.find({ studentId }).populate('eventId');
         const creditHistory = await CreditTransaction.find({ studentId }).populate('eventId').sort({ createdAt: -1 });
 
+        // Fetch registered events with timestamps
+        const registeredEvents = await Registration.find({ studentId })
+            .populate('eventId')
+            .sort({ createdAt: -1 }); // Latest registered first
+
         res.json({
             user,
             totalCredits: user.totalCredits || 0,
             attendedEvents,
             creditHistory,
+            registeredEvents,
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

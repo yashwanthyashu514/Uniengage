@@ -40,6 +40,7 @@ const AdminDashboard = () => {
     const [events, setEvents] = useState([]);
     const [coordinators, setCoordinators] = useState([]);
     const [students, setStudents] = useState([]);
+    const [pendingStudents, setPendingStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showCreateEventModal, setShowCreateEventModal] = useState(false);
@@ -64,17 +65,19 @@ const AdminDashboard = () => {
             const token = user.token;
             const config = { headers: { Authorization: `Bearer ${token}` } };
 
-            const [statsRes, eventsRes, coordRes, studentsRes] = await Promise.all([
+            const [statsRes, eventsRes, coordRes, studentsRes, pendingRes] = await Promise.all([
                 axios.get('http://localhost:5000/api/auth/stats', config),
                 axios.get('http://localhost:5000/api/events/list', config),
                 axios.get('http://localhost:5000/api/auth/coordinators', config),
-                axios.get('http://localhost:5000/api/auth/students', config)
+                axios.get('http://localhost:5000/api/auth/students', config),
+                axios.get('http://localhost:5000/api/auth/pending-students', config)
             ]);
 
             setStats(statsRes.data);
             setEvents(eventsRes.data);
             setCoordinators(coordRes.data);
             setStudents(studentsRes.data);
+            setPendingStudents(pendingRes.data);
         } catch (error) {
             console.error(error);
             toast.error('Failed to load dashboard data');
@@ -145,6 +148,18 @@ const AdminDashboard = () => {
             fetchData();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to create event');
+        }
+    };
+
+    const handleApproveStudent = async (studentId) => {
+        try {
+            const token = user.token;
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            await axios.put(`http://localhost:5000/api/auth/approve-student/${studentId}`, {}, config);
+            toast.success('Student approved successfully! ✅');
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to approve student');
         }
     };
 
@@ -384,6 +399,61 @@ const AdminDashboard = () => {
                         </ResponsiveContainer>
                     </motion.div>
                 </div>
+
+                {/* Pending Approvals */}
+                {pendingStudents.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.75 }}
+                        className="glass-card p-6 border border-yellow-500/30"
+                    >
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Users className="w-6 h-6 text-yellow-400" />
+                            Pending Student Approvals
+                        </h2>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-white/20">
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">Name</th>
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">Email</th>
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">USN</th>
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">Department</th>
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pendingStudents.map((student, index) => (
+                                        <motion.tr
+                                            key={student._id}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.05 * index }}
+                                            className="border-b border-white/10 hover:bg-white/5"
+                                        >
+                                            <td className="py-4 px-4 text-white font-medium">{student.name}</td>
+                                            <td className="py-4 px-4 text-white/80">{student.email}</td>
+                                            <td className="py-4 px-4 text-white/80">{student.usn}</td>
+                                            <td className="py-4 px-4 text-white/80">{student.department}</td>
+                                            <td className="py-4 px-4">
+                                                <motion.button
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => handleApproveStudent(student._id)}
+                                                    className="px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 flex items-center gap-2 font-semibold"
+                                                >
+                                                    <CheckCircle className="w-4 h-4" />
+                                                    Approve
+                                                </motion.button>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Event Management Table */}
                 <motion.div

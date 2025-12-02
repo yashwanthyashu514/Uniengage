@@ -16,13 +16,16 @@ const createEvent = async (req, res) => {
             category,
             credits,
             date,
+            date,
             venue,
+            rulebookUrl: req.file ? req.file.path : null,
             createdBy: req.user._id,
         });
 
         const createdEvent = await event.save();
         res.status(201).json(createdEvent);
     } catch (error) {
+        console.error('Create Event Error:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -75,9 +78,15 @@ const registerForEvent = async (req, res) => {
             return res.status(400).json({ message: 'Already registered' });
         }
 
+        const { acceptedRules } = req.body;
+        if (!acceptedRules) {
+            return res.status(400).json({ message: 'You must accept the rules and terms to register.' });
+        }
+
         const registration = new Registration({
             eventId,
             studentId,
+            acceptedRules: true
         });
 
         await registration.save();

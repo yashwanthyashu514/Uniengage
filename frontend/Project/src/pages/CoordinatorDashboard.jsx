@@ -12,6 +12,7 @@ const CoordinatorDashboard = () => {
     const [analytics, setAnalytics] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [participants, setParticipants] = useState([]);
+    const [pendingStudents, setPendingStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [coordinators, setCoordinators] = useState([]);
@@ -30,9 +31,10 @@ const CoordinatorDashboard = () => {
         try {
             const token = user.token;
             const config = { headers: { Authorization: `Bearer ${token}` } };
-            const [eventsRes, coordRes] = await Promise.all([
+            const [eventsRes, coordRes, pendingRes] = await Promise.all([
                 axios.get('http://localhost:5000/api/events/list', config),
-                axios.get('http://localhost:5000/api/auth/coordinators', config).catch(() => ({ data: [] }))
+                axios.get('http://localhost:5000/api/auth/coordinators', config).catch(() => ({ data: [] })),
+                axios.get('http://localhost:5000/api/auth/pending-students', config).catch(() => ({ data: [] }))
             ]);
 
             const myEvents = eventsRes.data.filter(e => e.createdBy === user._id);
@@ -46,6 +48,7 @@ const CoordinatorDashboard = () => {
                 events: myEvents
             });
             setCoordinators(coordRes.data);
+            setPendingStudents(pendingRes.data);
         } catch (error) {
             console.error(error);
             toast.error('Failed to load analytics');
@@ -58,25 +61,40 @@ const CoordinatorDashboard = () => {
         if (user) fetchAnalytics();
     }, [user]);
 
+    const [rulebookFile, setRulebookFile] = useState(null);
+
     const handleCreateEvent = async (e) => {
         e.preventDefault();
+
+        if (!rulebookFile) {
+            toast.error('Please upload a rulebook PDF');
+            return;
+        }
 
         // Combine date and time
         const eventDateTime = new Date(`${formData.date}T${formData.time || '00:00'}`);
 
         try {
             const token = user.token;
-            const config = { headers: { Authorization: `Bearer ${token}` } };
-            await axios.post('http://localhost:5000/api/events/create', {
-                title: formData.title,
-                description: formData.description,
-                date: eventDateTime,
-                venue: formData.venue,
-                category: formData.category,
-                credits: parseInt(formData.credits)
-            }, config);
 
-            toast.success('Event created successfully! 🎉');
+            const data = new FormData();
+            data.append('title', formData.title);
+            data.append('description', formData.description);
+            data.append('date', eventDateTime.toISOString()); // Ensure ISO string
+            data.append('venue', formData.venue);
+            data.append('category', formData.category);
+            data.append('credits', formData.credits);
+            data.append('rulebook', rulebookFile);
+
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            };
+
+            await axios.post('http://localhost:5000/api/events/create', data, config);
+
+            toast.success('Event created successfully');
             setShowCreateModal(false);
             setFormData({
                 title: '',
@@ -88,11 +106,15 @@ const CoordinatorDashboard = () => {
                 credits: '',
                 coordinator: ''
             });
+            setRulebookFile(null);
             fetchAnalytics();
         } catch (error) {
+            console.error(error);
             toast.error(error.response?.data?.message || 'Failed to create event');
         }
     };
+
+
 
     const viewParticipants = async (event) => {
         try {
@@ -265,6 +287,11 @@ const CoordinatorDashboard = () => {
                                             }`}>
                                             {event.status}
                                         </span>
+                                        {event.rulebookUrl && (
+                                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-200">
+                                                PDF Attached
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                                 {event.status === 'APPROVED' && (
@@ -282,6 +309,61 @@ const CoordinatorDashboard = () => {
                         ))}
                     </div>
                 </motion.div>
+
+                {/* Pending Approvals */}
+                {pendingStudents.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                        className="glass-card p-6 border border-yellow-500/30"
+                    >
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Users className="w-6 h-6 text-yellow-400" />
+                            Pending Student Approvals
+                        </h2>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-white/20">
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">Name</th>
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">Email</th>
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">USN</th>
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">Department</th>
+                                        <th className="text-left text-white/80 font-semibold pb-3 px-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pendingStudents.map((student, index) => (
+                                        <motion.tr
+                                            key={student._id}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.05 * index }}
+                                            className="border-b border-white/10 hover:bg-white/5"
+                                        >
+                                            <td className="py-4 px-4 text-white font-medium">{student.name}</td>
+                                            <td className="py-4 px-4 text-white/80">{student.email}</td>
+                                            <td className="py-4 px-4 text-white/80">{student.usn}</td>
+                                            <td className="py-4 px-4 text-white/80">{student.department}</td>
+                                            <td className="py-4 px-4">
+                                                <motion.button
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => handleApproveStudent(student._id)}
+                                                    className="px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 flex items-center gap-2 font-semibold"
+                                                >
+                                                    <CheckCircle className="w-4 h-4" />
+                                                    Approve
+                                                </motion.button>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                )}
             </div>
 
             {/* Create Event Modal */}
@@ -388,12 +470,34 @@ const CoordinatorDashboard = () => {
                                         />
                                     </div>
                                 </div>
+                                <div>
+                                    <label className="text-white/80 text-sm mb-2 block">Rulebook (PDF) *</label>
+                                    <div className="relative">
+                                        <input
+                                            type="file"
+                                            accept=".pdf"
+                                            onChange={(e) => setRulebookFile(e.target.files[0])}
+                                            className="hidden"
+                                            id="rulebook-upload"
+                                        />
+                                        <label
+                                            htmlFor="rulebook-upload"
+                                            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white cursor-pointer hover:bg-white/20 transition-colors flex items-center justify-between"
+                                        >
+                                            <span className={rulebookFile ? 'text-white' : 'text-white/50'}>
+                                                {rulebookFile ? rulebookFile.name : 'Choose file'}
+                                            </span>
+                                            <span className="bg-white/10 px-3 py-1 rounded text-sm">Browse</span>
+                                        </label>
+                                    </div>
+                                </div>
                                 <div className="flex gap-3 pt-4">
                                     <motion.button
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         type="submit"
-                                        className="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg font-semibold"
+                                        disabled={!formData.title || !formData.date || !rulebookFile}
+                                        className="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Create Event
                                     </motion.button>
@@ -464,7 +568,7 @@ const CoordinatorDashboard = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </Layout>
+        </Layout >
     );
 };
 
